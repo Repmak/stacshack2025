@@ -71,6 +71,7 @@ export default function Home() {
         .map((snippet) => snippet.replace(/^\*\*\d+\. .*?\*\* /, ""));
 
       console.log(snippetsWithTitles);
+      console.log(snippetsWithTitles.length);
       setSnippets(snippetsWithTitles);
 
       fetch("http://localhost:5000/api/upload_data", {
@@ -92,7 +93,6 @@ export default function Home() {
         .catch((error) => {
           console.error("Error fetching predictions from Flask:", error);
         });
-
     } catch (error) {
       console.error("Snippet generation failed:", error);
       alert("Failed to generate educational snippets.");
