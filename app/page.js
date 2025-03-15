@@ -72,6 +72,27 @@ export default function Home() {
 
       console.log(snippetsWithTitles);
       setSnippets(snippetsWithTitles);
+
+      fetch("http://localhost:5000/api/upload_data", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(result),
+      })
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error("Network response was not ok.");
+          }
+          return response.json();
+        })
+        .then((data) => {
+          console.log("Predictions received:", JSON.parse(data));
+        })
+        .catch((error) => {
+          console.error("Error fetching predictions from Flask:", error);
+        });
+
     } catch (error) {
       console.error("Snippet generation failed:", error);
       alert("Failed to generate educational snippets.");
