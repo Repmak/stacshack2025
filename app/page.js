@@ -1,11 +1,9 @@
+"use client";
 import { useState } from "react";
 import { extractTextFromPdfs } from "../utils/pdfUtils";
-import { OpenAI } from "openai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const openai = new OpenAI({
-  apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY, // Store in environment variables
-  dangerouslyAllowBrowser: true, // Remove for backend API calls
-});
+const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY);
 
 export default function Home() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -34,7 +32,7 @@ export default function Home() {
         .join("");
       setExtractedText(extracted);
 
-      await generateSnippets(extracted); // Generate snippets after extraction
+      await generateSnippets(extracted);
     } catch (error) {
       console.error("Text extraction failed:", error);
       alert("Something went wrong while extracting text.");
@@ -46,25 +44,31 @@ export default function Home() {
 
   const generateSnippets = async (text) => {
     try {
-      const response = await openai.chat.completions.create({
-        model: "gpt-4",
-        messages: [
-          {
-            role: "system",
-            content:
-              "You are an AI that extracts educational content from uploaded text and summarizes it into 5 distinct 150-word educational snippets.",
-          },
-          {
-            role: "user",
-            content: `Extract five distinct 150-word educational snippets from the following text. Each snippet should cover a unique topic:\n\n${text}`,
-          },
-        ],
-        max_tokens: 1000,
-      });
+      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
-      const generatedSnippets =
-        response.choices[0].message.content.split("\n\n");
-      setSnippets(generatedSnippets);
+      const prompt = `Extract five **distinct** 150-word educational snippets from the following text.
+      Each snippet should focus on a **separate topic**, avoiding redundancy.
+      Ensure the format follows this structure:
+      
+      **1. [Topic Title]**  
+      [150-word explanation]  
+      
+      **2. [Topic Title]**  
+      [150-word explanation]  
+      
+      Continue this pattern for all five snippets.
+  
+      Here is the text:
+      ${text}`;
+
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      const generatedText = response.text();
+
+      const snippetsWithTitles = generatedText
+        .split(/\n\n(?=\*\*\d+\.)/)
+        .slice(0, 5);
+      setSnippets(snippetsWithTitles);
     } catch (error) {
       console.error("Snippet generation failed:", error);
       alert("Failed to generate educational snippets.");
@@ -106,26 +110,6 @@ export default function Home() {
                 </button>
               </div>
             </div>
-          </div>
-        )}
-        {extractedText && (
-          <div className="mt-8 p-4 bg-gray-800 text-white rounded-lg w-3/4">
-            <h2 className="text-lg font-bold text-primary">Extracted Text:</h2>
-            <pre className="whitespace-pre-wrap max-h-96 overflow-auto">
-              {extractedText}
-            </pre>
-          </div>
-        )}
-        {snippets.length > 0 && (
-          <div className="mt-8 p-4 bg-gray-800 text-white rounded-lg w-3/4">
-            <h2 className="text-lg font-bold text-primary">
-              Educational Snippets:
-            </h2>
-            {snippets.map((snippet, index) => (
-              <div key={index} className="p-2 my-2 bg-gray-700 rounded">
-                <p>{snippet}</p>
-              </div>
-            ))}
           </div>
         )}
       </main>
