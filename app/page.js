@@ -50,10 +50,10 @@ export default function Home() {
       Each snippet should focus on a **separate topic**, avoiding redundancy.
       Ensure the format follows this structure:
       
-      **1. [Topic Title]**  
+      **[Topic Title]**  
       [150-word explanation]  
       
-      **2. [Topic Title]**  
+      **[Topic Title]**  
       [150-word explanation]  
       
       Continue this pattern for all five snippets.
@@ -66,8 +66,11 @@ export default function Home() {
       const generatedText = response.text();
 
       const snippetsWithTitles = generatedText
-        .split(/\n\n(?=\*\*\d+\.)/)
-        .slice(0, 5);
+        .split(/\n\n(?=\*\*.+?\*\*)/)
+        .slice(0, 5)
+        .map((snippet) => snippet.replace(/^\*\*\d+\. .*?\*\* /, ""));
+
+      console.log(snippetsWithTitles);
       setSnippets(snippetsWithTitles);
     } catch (error) {
       console.error("Snippet generation failed:", error);
