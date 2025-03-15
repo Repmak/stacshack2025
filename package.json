@@ -12,6 +12,8 @@
     "@google/generative-ai": "^0.24.0",
     "@remotion/player": "^4.0.278",
     "daisyui": "^5.0.4",
+    "flask": "^0.2.10",
+    "flask-cors": "^0.0.1",
     "multer": "^1.4.5-lts.1",
     "next": "15.2.2",
     "next-connect": "^1.0.0",

@@ -63,23 +63,28 @@ export default function Home() {
 
       const result = await model.generateContent(prompt);
       const response = await result.response;
-      const generatedText = response.text();
+      const generatedText = await response.text();
 
       const snippetsWithTitles = generatedText
         .split(/\n\n(?=\*\*.+?\*\*)/)
         .slice(0, 5)
-        .map((snippet) => snippet.replace(/^\*\*\d+\. .*?\*\* /, ""));
+        .map((snippet, index) => ({
+          [`Snippet ${index + 1}`]: snippet.replace(/^\*\*\d+\. .*?\*\* /, ""),
+        }));
 
-      console.log(snippetsWithTitles);
-      console.log(snippetsWithTitles.length);
-      setSnippets(snippetsWithTitles);
+      const snippetsJson = snippetsWithTitles.reduce((acc, snippet) => {
+        return { ...acc, ...snippet };
+      }, {});
+
+      console.log(snippetsJson);
+      setSnippets(JSON.stringify(snippetsJson));
 
       fetch("http://localhost:5000/api/upload_data", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(result),
+        body: JSON.stringify(snippetsJson),
       })
         .then((response) => {
           if (!response.ok) {
@@ -88,7 +93,7 @@ export default function Home() {
           return response.json();
         })
         .then((data) => {
-          console.log("Predictions received:", JSON.parse(data));
+          console.log("Predictions received:", data);
         })
         .catch((error) => {
           console.error("Error fetching predictions from Flask:", error);
