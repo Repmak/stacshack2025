@@ -12,6 +12,8 @@ export default function Home() {
   const [snippets, setSnippets] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  const [videos, setVideos] = useState([]);
+
   const handleModalToggle = () => setIsModalOpen(!isModalOpen);
 
   const handleFileChange = (event) => {
@@ -43,60 +45,53 @@ export default function Home() {
   };
 
   const generateSnippets = async (text) => {
-    try {
-      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
-      const prompt = `Extract five **distinct** 150-word educational snippets from the following text.
-      Each snippet should focus on a **separate topic**, avoiding redundancy.
-      Ensure the format follows this structure:
-      
-      **[Topic Title]**  
-      [150-word explanation]  
-      
-      **[Topic Title]**  
-      [150-word explanation]  
-      
-      Continue this pattern for all five snippets.
-  
-      Here is the text:
-      ${text}`;
+    const prompt = `Extract five **distinct** 150-word educational snippets from the following text.
+    Each snippet should focus on a **separate topic**, avoiding redundancy.
+    Ensure the format follows this structure:
+    
+    **[Topic Title]**  
+    [150-word explanation]  
+    
+    **[Topic Title]**  
+    [150-word explanation]  
+    
+    Continue this pattern for all five snippets. Do not give any preamble text. Go straight to snippet 1.
 
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      const generatedText = response.text();
+    Here is the text:
+    ${text}`;
 
-      const snippetsWithTitles = generatedText
-        .split(/\n\n(?=\*\*.+?\*\*)/)
-        .slice(0, 5)
-        .map((snippet) => snippet.replace(/^\*\*\d+\. .*?\*\* /, ""));
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const generatedText = await response.text();
 
-      console.log(snippetsWithTitles);
-      setSnippets(snippetsWithTitles);
+    const snippetsWithTitles = generatedText
+      .split(/\n\n(?=\*\*.+?\*\*)/)
+      .slice(0, 5)
+      .map((snippet, index) => ({
+        [`Snippet ${index + 1}`]: snippet.replace(/^\*\*\d+\. .*?\*\* /, ""),
+      }));
 
-      fetch("http://localhost:5000/api/upload_data", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(result),
-      })
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error("Network response was not ok.");
-          }
-          return response.json();
-        })
-        .then((data) => {
-          console.log("Predictions received:", JSON.parse(data));
-        })
-        .catch((error) => {
-          console.error("Error fetching predictions from Flask:", error);
-        });
+    const snippetsJson = snippetsWithTitles.reduce((acc, snippet) => {
+      return { ...acc, ...snippet };
+    }, {});
 
-    } catch (error) {
-      console.error("Snippet generation failed:", error);
-      alert("Failed to generate educational snippets.");
-    }
+    setSnippets(JSON.stringify(snippetsJson));
+
+    fetch("http://localhost:5000/api/upload_data", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(snippetsJson),
+    })
+    .then(response => response.json())
+    .then(data => {
+      // Assuming the response is in the form { videos: [base64_video_1, base64_video_2, ...] }
+      setVideos(data.videos);
+    })
+    .catch(error => console.error("Error fetching videos:", error));
   };
 
   return (
@@ -119,11 +114,11 @@ export default function Home() {
                 Upload your lecture notes, lecture slides etc. here.
               </p>
               <input
-                type="file"
-                multiple
-                className="file-input file-input-bordered w-full max-w-xs"
-                onChange={handleFileChange}
-                accept="application/pdf"
+                  type="file"
+                  multiple
+                  className="file-input file-input-bordered w-full max-w-xs"
+                  onChange={handleFileChange}
+                  accept="application/pdf"
               />
               <div className="modal-action">
                 <button className="btn btn-primary" onClick={handleModalToggle}>
@@ -132,6 +127,21 @@ export default function Home() {
                 <button className="btn btn-secondary" onClick={handleSubmit}>
                   Submit
                 </button>
+              </div>
+              <div>
+                {videos.length > 0 ? (
+                    videos.map((base64Video, index) => (
+                        <div key={index}>
+                          <h3>Video {index + 1}</h3>
+                          <video controls width="400">
+                            <source src={`data:video/mp4;base64,${base64Video}`} type="video/mp4"/>
+                            Your browser does not support the video tag.
+                          </video>
+                        </div>
+                    ))
+                ) : (
+                    <p>Loading videos...</p>
+                )}
               </div>
             </div>
           </div>
